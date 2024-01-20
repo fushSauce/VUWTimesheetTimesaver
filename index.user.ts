@@ -9,35 +9,9 @@
 // @description 16/01/2024, 14:57:38
 // ==/UserScript==
 
-// function getToTimesheetPage (defaultDate): void {
-//   const generalTimesheetButton: HTMLButtonElement | null =
-//     document.querySelector("span[title='General Timesheet']")
-//   if (generalTimesheetButton !== null) {
-//     generalTimesheetButton.click()
-//   }
-//   const addTimesheetButton: HTMLButtonElement | null =
-//     document.querySelector('body p a')
-//   if (
-//     addTimesheetButton !== null &&
-//     addTimesheetButton.innerText === 'Click here to add a new timesheet'
-//   ) {
-//     addTimesheetButton.click()
-//   }
-//   const startDateInput: HTMLInputElement | null = document.querySelector(
-//     "input[name='P_START_DATE']"
-//   )
-//   if (startDateInput !== null) {
-//     startDateInput.value = defaultDate
-//   }
-//   const findEmployeeJobsButton: HTMLButtonElement | null =
-//     document.querySelector("input[value='Find Employee Jobs']")
-//   if (findEmployeeJobsButton !== null) {
-//     findEmployeeJobsButton.click()
-//   }
-// }
 
-const parseICal = (): void => {
-  const tsentry = document.querySelectorAll('tbody#TSEntry tr')
+const parseICal = (): any[] => {
+  const rows = document.querySelectorAll('tbody#TSEntry tr')
 
   const icalString = prompt('Enter iCalendar Data')
   // @ts-expect-error Since Userscript, we use @require icaljs lib but typescript doesn't know
@@ -45,70 +19,33 @@ const parseICal = (): void => {
   // @ts-expect-error Since Userscript, we use @require icaljs lib but typescript doesn't know
   const comp = new ICAL.Component(ical)
 
-  if (tsentry.length === 0) {
+  if (rows.length === 0) {
     throw new Error('No Entries!')
   }
 
   const subcomponents = comp.getAllSubcomponents('vevent')
   const ourEntries: any[] = []
-  for (const subComponentIndex in subcomponents) {
+  for (let sc of subcomponents) {
     // @ts-expect-error Since Userscript, we use @require icaljs lib but typescript doesn't know
-    const sc = new ICAL.Event(subcomponents[subComponentIndex])
-    let startDate = sc.startDate
-    let endDate = sc.endDate
+    sc = new ICAL.Event(sc)
 
-    const shortMonth = new Date(
-      Date.UTC(
-        startDate.year as number,
-        startDate.month - 1,
-        startDate.day - 1,
-        startDate.hour as number,
-        startDate.minute as number,
-        startDate.second as number
-      )
-    ).toLocaleString('en-nz', {
+    const startDate = convertDate(sc.startDate)
+    const endDate = convertDate(sc.endDate)
+
+    const shortMonth = startDate.toLocaleString('en-nz', {
       month: 'short',
       timeZone: 'Pacific/Auckland'
-    }) /* Jun */
-    const workDate = `${startDate.day
-      .toString()
-      .padStart(2, '0')}-${shortMonth}-${startDate.year}`
+    })
 
-    const shortWeekday = new Date(
-      Date.UTC(
-        startDate.year as number,
-        startDate.month - 1,
-        startDate.day - 1,
-        startDate.hour as number,
-        startDate.minute as number,
-        startDate.second as number
-      )
-    ).toLocaleString('en-nz', {
+    const workDate = `${startDate.getDay()
+      .toString()
+      // @ts-expect-error idk bruh pad start be willin
+      .padStart(2, '0')}-${shortMonth}-${startDate.getFullYear()}`
+
+    const shortWeekday = startDate.toLocaleString('en-nz', {
       weekday: 'short',
       timeZone: 'Pacific/Auckland'
-    }) /* Jun */
-
-    startDate = new Date(
-      Date.UTC(
-        startDate.year as number,
-        startDate.month - 1,
-        startDate.day - 1,
-        startDate.hour as number,
-        startDate.minute as number,
-        startDate.second as number
-      )
-    )
-
-    endDate = new Date(
-      Date.UTC(
-        endDate.year as number,
-        endDate.month - 1,
-        endDate.day - 1,
-        endDate.hour as number,
-        endDate.minute as number,
-        endDate.second as number
-      )
-    )
+    })
 
     const nHours = (endDate.getTime() - startDate.getTime()) / 1000 / 60 / 60
 
@@ -126,10 +63,26 @@ const parseICal = (): void => {
       activity: sc.summary
     })
   }
+  return ourEntries
+}
 
-  for (const entry of ourEntries) {
-    insertEntryValues(entry, tsentry)
-  }
+/**
+ * Convert ical.js date to vanilla JS Date.
+ * @param icaljsDate
+ * @returns JS Date instance
+ */
+const convertDate = (icaljsDate): Date => {
+  return new Date(
+    Date.UTC(
+      icaljsDate.year as number,
+      // -1 because JS Date uses 0 indexed months and days
+      icaljsDate.month - 1,
+      icaljsDate.day - 1,
+      icaljsDate.hour as number,
+      icaljsDate.minute as number,
+      icaljsDate.second as number
+    )
+  )
 }
 
 const addICalButton = (): void => {
@@ -140,11 +93,11 @@ const addICalButton = (): void => {
   if (cancelButton !== null) {
     cancelButton.insertAdjacentHTML(
       'afterend',
-      '&nbsp;&nbsp;&nbsp;&nbsp;<input type="button" value="Pass iCal Data">'
+      '&nbsp;&nbsp;&nbsp;&nbsp;<input type="button" value="Pass iCal Data" onclick="">'
     )
     const icalButton: HTMLButtonElement = cancelButton.nextElementSibling as HTMLButtonElement
     if (icalButton !== null) {
-      icalButton.onclick = parseICal
+      icalButton.onclick = processICalData
     }
   }
 }
@@ -152,6 +105,8 @@ const addICalButton = (): void => {
 const insertEntryValues = (entry, rows): void => {
   // find nearest empty row
   let nearestEmptyRow: Element | null = null
+
+  console.log("rows: ",rows)
 
   for (const row of rows) {
     const workDateInput: string = row.querySelector("input[name='P_WORK_DATE']").value
@@ -205,4 +160,38 @@ const insertEntryValues = (entry, rows): void => {
   dayInput.value = entry.day
 }
 
+const processICalData = (): void => {
+  const rows = document.querySelectorAll('tbody#TSEntry tr')
+  for (const entry of parseICal()) {
+    insertEntryValues(entry, rows)
+  }
+}
+
 addICalButton()
+
+// function getToTimesheetPage (defaultDate): void {
+//   const generalTimesheetButton: HTMLButtonElement | null =
+//     document.querySelector("span[title='General Timesheet']")
+//   if (generalTimesheetButton !== null) {
+//     generalTimesheetButton.click()
+//   }
+//   const addTimesheetButton: HTMLButtonElement | null =
+//     document.querySelector('body p a')
+//   if (
+//     addTimesheetButton !== null &&
+//     addTimesheetButton.innerText === 'Click here to add a new timesheet'
+//   ) {
+//     addTimesheetButton.click()
+//   }
+//   const startDateInput: HTMLInputElement | null = document.querySelector(
+//     "input[name='P_START_DATE']"
+//   )
+//   if (startDateInput !== null) {
+//     startDateInput.value = defaultDate
+//   }
+//   const findEmployeeJobsButton: HTMLButtonElement | null =
+//     document.querySelector("input[value='Find Employee Jobs']")
+//   if (findEmployeeJobsButton !== null) {
+//     findEmployeeJobsButton.click()
+//   }
+// }
