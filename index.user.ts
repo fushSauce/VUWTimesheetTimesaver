@@ -9,13 +9,11 @@
 // @description 16/01/2024, 14:57:38
 // ==/UserScript==
 
-
-const parseICal = (): any[] => {
+const parseICal = (icalData): any[] => {
   const rows = document.querySelectorAll('tbody#TSEntry tr')
 
-  const icalString = prompt('Enter iCalendar Data')
   // @ts-expect-error Since Userscript, we use @require icaljs lib but typescript doesn't know
-  const ical = ICAL.parse(icalString)
+  const ical = ICAL.parse(icalData)
   // @ts-expect-error Since Userscript, we use @require icaljs lib but typescript doesn't know
   const comp = new ICAL.Component(ical)
 
@@ -39,35 +37,38 @@ const parseICal = (): any[] => {
 
     const workDate = `${startDate.getDay()
       .toString()
-      // @ts-expect-error idk bruh pad start be willin
+      // @ts-expect-error idk bruh pad start be whilin
       .padStart(2, '0')}-${shortMonth}-${startDate.getFullYear()}`
 
-    const shortWeekday = startDate.toLocaleString('en-nz', {
+    const day = startDate.toLocaleString('en-nz', {
       weekday: 'short',
       timeZone: 'Pacific/Auckland'
     })
 
-    const nHours = (endDate.getTime() - startDate.getTime()) / 1000 / 60 / 60
+    const units = (endDate.getTime() - startDate.getTime()) / 1000 / 60 / 60
 
     const startTime: string = startDate.toISOString().substring(11, 16)
-    const endTime: string = endDate.toISOString().substring(11, 16)
+    const finishTime: string = endDate.toISOString().substring(11, 16)
+    const activity = sc.summary
+    const breakLength = 0
+    const payCode = 'ORDHR'
 
     ourEntries.push({
       workDate,
-      day: shortWeekday,
+      day,
       startTime,
-      finishTime: endTime,
-      breakLength: 0,
-      units: nHours,
-      payCode: 'ORDHR',
-      activity: sc.summary
+      finishTime,
+      breakLength,
+      units,
+      payCode,
+      activity
     })
   }
   return ourEntries
 }
 
 /**
- * Convert ical.js date to vanilla JS Date.
+ * Convert ical.js date to vanilla JS Date to get delta in dates more easily.
  * @param icaljsDate
  * @returns JS Date instance
  */
@@ -102,11 +103,14 @@ const addICalButton = (): void => {
   }
 }
 
+/**
+ * Finds nearest empty row and populates that row with the entry data.
+ * @param entry
+ * @param rows
+ */
 const insertEntryValues = (entry, rows): void => {
   // find nearest empty row
   let nearestEmptyRow: Element | null = null
-
-  console.log("rows: ",rows)
 
   for (const row of rows) {
     const workDateInput: string = row.querySelector("input[name='P_WORK_DATE']").value
@@ -160,38 +164,64 @@ const insertEntryValues = (entry, rows): void => {
   dayInput.value = entry.day
 }
 
-const processICalData = (): void => {
+const processICalData = (icalData): void => {
   const rows = document.querySelectorAll('tbody#TSEntry tr')
-  for (const entry of parseICal()) {
+  for (const entry of parseICal(icalData)) {
     insertEntryValues(entry, rows)
   }
 }
 
+/**
+ * Listen for paste and check if we can parse it as ical data.
+ */
+addEventListener('paste', (event) => {
+  const pastedData: string = event.clipboardData.getData('text/plain')
+  try {
+    // @ts-expect-error Since Userscript, we use @require icaljs lib but typescript doesn't know
+    ICAL.parse(pastedData)
+    const rows = document.querySelectorAll('tbody#TSEntry tr')
+    if (rows !== null) {
+      processICalData(pastedData)
+    }
+  } catch (e: any) {
+    // Ignore errors parsing as that just means pasted content wasn't ical data
+  }
+})
+
 addICalButton()
 
-// function getToTimesheetPage (defaultDate): void {
-//   const generalTimesheetButton: HTMLButtonElement | null =
-//     document.querySelector("span[title='General Timesheet']")
-//   if (generalTimesheetButton !== null) {
-//     generalTimesheetButton.click()
-//   }
-//   const addTimesheetButton: HTMLButtonElement | null =
-//     document.querySelector('body p a')
-//   if (
-//     addTimesheetButton !== null &&
-//     addTimesheetButton.innerText === 'Click here to add a new timesheet'
-//   ) {
-//     addTimesheetButton.click()
-//   }
-//   const startDateInput: HTMLInputElement | null = document.querySelector(
-//     "input[name='P_START_DATE']"
-//   )
-//   if (startDateInput !== null) {
-//     startDateInput.value = defaultDate
-//   }
-//   const findEmployeeJobsButton: HTMLButtonElement | null =
-//     document.querySelector("input[value='Find Employee Jobs']")
-//   if (findEmployeeJobsButton !== null) {
-//     findEmployeeJobsButton.click()
-//   }
-// }
+// *********************
+// Debugging
+// *********************
+
+/**
+ * Takes ages to manually get to timesheet page when debugging, this automates 
+ * it, just add the date you want the timesheet to start at.
+ * @param defaultDate
+ */
+function debugGetToTimesheetPage (defaultDate): void {
+  const generalTimesheetButton: HTMLButtonElement | null =
+    document.querySelector("span[title='General Timesheet']")
+  if (generalTimesheetButton !== null) {
+    generalTimesheetButton.click()
+  }
+  const addTimesheetButton: HTMLButtonElement | null =
+    document.querySelector('body p a')
+  if (
+    addTimesheetButton !== null &&
+    addTimesheetButton.innerText === 'Click here to add a new timesheet'
+  ) {
+    addTimesheetButton.click()
+  }
+  const startDateInput: HTMLInputElement | null = document.querySelector(
+    "input[name='P_START_DATE']"
+  )
+  if (startDateInput !== null) {
+    startDateInput.value = defaultDate
+  }
+  const findEmployeeJobsButton: HTMLButtonElement | null =
+    document.querySelector("input[value='Find Employee Jobs']")
+  if (findEmployeeJobsButton !== null) {
+    findEmployeeJobsButton.click()
+  }
+}
