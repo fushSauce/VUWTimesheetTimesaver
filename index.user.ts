@@ -153,8 +153,7 @@ const insertEntryValues = (entry, rows): void => {
   // find nearest empty row
   let nearestEmptyRow: Element | null = null
 
-  for (let rowIndex = 0; rowIndex < rows.length; rowIndex++) {
-    const row = rows[rowIndex]
+  for (const row of rows) {
     const workDateInput: string = row.querySelector("input[name='P_WORK_DATE']").value
     if (workDateInput === '') {
       nearestEmptyRow = row
