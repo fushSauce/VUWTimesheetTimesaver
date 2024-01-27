@@ -35,7 +35,7 @@ const parseICal = (icalData): any[] => {
       timeZone: 'Pacific/Auckland'
     })
 
-    const workDate = `${startDate.getDay()
+    const workDate = `${startDate.getDate()
       .toString()
       // @ts-expect-error idk bruh pad start be whilin
       .padStart(2, '0')}-${shortMonth}-${startDate.getFullYear()}`
@@ -64,6 +64,8 @@ const parseICal = (icalData): any[] => {
       activity
     })
   }
+  console.log('ourEntries: ', ourEntries)
+
   return ourEntries
 }
 
