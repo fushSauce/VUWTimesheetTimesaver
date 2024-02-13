@@ -203,7 +203,6 @@ addEventListener('paste', (event) => {
 })
 
 addICalButton()
-debugGetToTimesheetPage('11-FEB-2024')
 
 // *********************
 // Debugging
@@ -212,6 +211,7 @@ debugGetToTimesheetPage('11-FEB-2024')
 /**
  * Takes ages to manually get to timesheet page when debugging, this automates 
  * it, just add the date you want the timesheet to start at.
+ * ex usage: debugGetToTimesheetPage('11-FEB-2024')
  * @param defaultDate
  */
 function debugGetToTimesheetPage (defaultDate): void {
