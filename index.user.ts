@@ -53,16 +53,27 @@ const parseICal = (icalData): any[] => {
     const activity = sc.summary
     const breakLength = 0
     const payCode = 'ORDHR'
+    const dayNumber = date.getDay()
 
     ourEntries.push({
       workDate,
       day,
+      dayNumber,
       startTime,
       finishTime,
       breakLength,
       units,
       payCode,
       activity
+    })
+
+    // sort by week day
+    ourEntries.sort((a, b) => {
+      if (a.dayNumber > b.dayNumber) {
+        return 1
+      } else {
+        return 0
+      }
     })
   }
   console.log('ourEntries: ', ourEntries)
