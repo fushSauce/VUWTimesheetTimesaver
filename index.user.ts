@@ -27,23 +27,24 @@ const parseICal = (icalData): any[] => {
     // @ts-expect-error Since Userscript, we use @require icaljs lib but typescript doesn't know
     sc = new ICAL.Event(sc)
 
+    console.log('sc: ', sc)
+    console.log(sc.startDate._time)
+
     const startDate = convertDate(sc.startDate)
     const endDate = convertDate(sc.endDate)
+    const foo: any = sc.startDate._time
 
-    const shortMonth = startDate.toLocaleString('en-nz', {
-      month: 'short',
-      timeZone: 'Pacific/Auckland'
-    })
+    const date = new Date(foo.year as number, foo.month - 1, foo.day as number, foo.hour as number, foo.minute as number, foo.second as number)
 
-    const workDate = `${startDate.getDate()
+    const shortMonth = date.toLocaleString('en-nz', { month: 'short' }) /* Jun */
+
+
+    const workDate = `${date.getDate()
       .toString()
       // @ts-expect-error idk bruh pad start be whilin
-      .padStart(2, '0')}-${shortMonth}-${startDate.getFullYear()}`
+      .padStart(2, '0')}-${shortMonth}-${date.getFullYear()}`
 
-    const day = startDate.toLocaleString('en-nz', {
-      weekday: 'short',
-      timeZone: 'Pacific/Auckland'
-    })
+    const day = date.toLocaleString('en-NZ', { weekday: 'short' }) 
 
     const units = (endDate.getTime() - startDate.getTime()) / 1000 / 60 / 60
 
@@ -191,6 +192,7 @@ addEventListener('paste', (event) => {
 })
 
 addICalButton()
+debugGetToTimesheetPage('11-FEB-2024')
 
 // *********************
 // Debugging
