@@ -58,6 +58,7 @@ const parseICal = (icalData): any[] => {
     ourEntries.push({
       workDate,
       day,
+      date,
       dayNumber,
       startTime,
       finishTime,
@@ -66,10 +67,11 @@ const parseICal = (icalData): any[] => {
       payCode,
       activity
     })
-
     // sort by week day
     ourEntries.sort((a, b) => {
-      if (a.dayNumber > b.dayNumber) {
+      if (a.date.getTime() < b.date.getTime()) {
+        return -1
+      } else if (a.date.getTime() < b.date.getTime()) {
         return 1
       } else {
         return 0
@@ -202,7 +204,8 @@ addEventListener('paste', (event) => {
   }
 })
 
-addICalButton()
+// addICalButton()
+// debugGetToTimesheetPage('11-Feb-2024')
 
 // *********************
 // Debugging
