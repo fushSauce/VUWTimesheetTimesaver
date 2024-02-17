@@ -1,13 +1,41 @@
 // ==UserScript==
-// @name        Ascender Pay iCalendar import
+// @name        VUW Timesheet Time Saver
 // @namespace   Violentmonkey Scripts
 // @match       https://vuwp.ascenderpay.com/ords/*
 // @grant       none
-// @version     1.0
-// @author      -
+// @version     0.1
+// @author      fushSauce
 // @require https://cdnjs.cloudflare.com/ajax/libs/ical.js/1.5.0/ical.min.js
-// @description 16/01/2024, 14:57:38
+// @description Copy your calendar events directly into your VUW timesheet.
 // ==/UserScript==
+
+// *********************
+// Get Data
+// *********************
+
+/**
+ * Listen for paste and check if we can parse it as ical data, if so, insert
+ * the entries we get from ical data.
+ */
+addEventListener('paste', (event) => {
+  const pastedData: string = event.clipboardData.getData('text/plain')
+  const rows = document.querySelectorAll('tbody#TSEntry tr')
+  try {
+    // @ts-expect-error Since Userscript, we use @require icaljs lib but typescript doesn't know
+    ICAL.parse(pastedData)
+  } catch (e: any) {
+    // Ignore if not ical data
+    return
+  }
+  // only insert entries if we were able to parse ical data hence return in catch.
+  for (const entry of icalToEntryList(pastedData)) {
+    insertEntryValues(entry, rows)
+  }
+})
+
+// *********************
+// Process
+// *********************
 
 class Entry {
   workDate: string
@@ -22,6 +50,11 @@ class Entry {
   activity: string
 }
 
+/**
+ * Convert ical data to a list of entries
+ * @param icalData ical data that is pasted by user
+ * @returns list of entries
+ */
 const icalToEntryList = (icalData): Entry[] => {
   // @ts-expect-error Since Userscript, we use @require icaljs lib but typescript doesn't know
   const ical = ICAL.parse(icalData)
@@ -96,7 +129,7 @@ const convertDate = (icaljsDate): Date => {
 }
 
 const findNearestEmptyRow = (rows): Element => {
-  let nearestEmptyRow: Element | null = null
+  let nearestEmptyRow: Element
 
   for (const row of rows) {
     const workDateInput: string = row.querySelector("input[name='P_WORK_DATE']").value
@@ -139,19 +172,6 @@ const insertEntryValues = (entry, rows): void => {
     inputArea.value = entry[idToEntryProperty[s]]
   })
 }
-
-/**
- * Listen for paste and check if we can parse it as ical data.
- */
-addEventListener('paste', (event) => {
-  const pastedData: string = event.clipboardData.getData('text/plain')
-  const rows = document.querySelectorAll('tbody#TSEntry tr')
-  for (const entry of icalToEntryList(pastedData)) {
-    insertEntryValues(entry, rows)
-  }
-})
-
-// debugGetToTimesheetPage('11-Feb-2024')
 
 // *********************
 // Debugging
