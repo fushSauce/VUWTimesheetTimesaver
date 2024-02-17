@@ -9,53 +9,51 @@
 // @description 16/01/2024, 14:57:38
 // ==/UserScript==
 
-const parseICal = (icalData): any[] => {
-  const rows = document.querySelectorAll('tbody#TSEntry tr')
+class Entry {
+  workDate: string
+  day: string
+  date: string
+  dayNumber: string
+  startTime: string
+  finishTime: string
+  breakLength: string
+  units: string
+  payCode: string
+  activity: string
+}
 
+const icalToEntryList = (icalData): Entry[] => {
   // @ts-expect-error Since Userscript, we use @require icaljs lib but typescript doesn't know
   const ical = ICAL.parse(icalData)
   // @ts-expect-error Since Userscript, we use @require icaljs lib but typescript doesn't know
   const comp = new ICAL.Component(ical)
-
-  if (rows.length === 0) {
-    throw new Error('No Entries!')
-  }
-
   const subcomponents = comp.getAllSubcomponents('vevent')
-  const ourEntries: any[] = []
-  for (let sc of subcomponents) {
+
+  // map ical events into entries which only contain data we need
+  return subcomponents.map((event) => {
     // @ts-expect-error Since Userscript, we use @require icaljs lib but typescript doesn't know
-    sc = new ICAL.Event(sc)
+    event = new ICAL.Event(event)
 
-    console.log('sc: ', sc)
-    console.log(sc.startDate._time)
-
-    const startDate = convertDate(sc.startDate)
-    const endDate = convertDate(sc.endDate)
-    const foo: any = sc.startDate._time
-
-    const date = new Date(foo.year as number, foo.month - 1, foo.day as number, foo.hour as number, foo.minute as number, foo.second as number)
-
+    const startDate = convertDate(event.startDate)
+    const endDate = convertDate(event.endDate)
+    const startDateTime: any = event.startDate._time
+    const date = new Date(startDateTime.year as number, startDateTime.month - 1, startDateTime.day as number, startDateTime.hour as number, startDateTime.minute as number, startDateTime.second as number)
     const shortMonth = date.toLocaleString('en-nz', { month: 'short' }) /* Jun */
-
 
     const workDate = `${date.getDate()
       .toString()
       // @ts-expect-error idk bruh pad start be whilin
       .padStart(2, '0')}-${shortMonth}-${date.getFullYear()}`
-
-    const day = date.toLocaleString('en-NZ', { weekday: 'short' }) 
-
+    const day = date.toLocaleString('en-NZ', { weekday: 'short' })
     const units = (endDate.getTime() - startDate.getTime()) / 1000 / 60 / 60
-
     const startTime: string = startDate.toISOString().substring(11, 16)
     const finishTime: string = endDate.toISOString().substring(11, 16)
-    const activity = sc.summary
+    const activity = event.summary
     const breakLength = 0
     const payCode = 'ORDHR'
     const dayNumber = date.getDay()
 
-    ourEntries.push({
+    return {
       workDate,
       day,
       date,
@@ -66,21 +64,16 @@ const parseICal = (icalData): any[] => {
       units,
       payCode,
       activity
-    })
-    // sort by week day
-    ourEntries.sort((a, b) => {
-      if (a.date.getTime() < b.date.getTime()) {
-        return -1
-      } else if (a.date.getTime() < b.date.getTime()) {
-        return 1
-      } else {
-        return 0
-      }
-    })
-  }
-  console.log('ourEntries: ', ourEntries)
-
-  return ourEntries
+    }
+  }).sort((entry1, entry2) => {
+    if (entry1.date.getTime() < entry2.date.getTime()) {
+      return -1
+    } else if (entry1.date.getTime() < entry2.date.getTime()) {
+      return 1
+    } else {
+      return 0
+    }
+  })
 }
 
 /**
@@ -100,23 +93,6 @@ const convertDate = (icaljsDate): Date => {
       icaljsDate.second as number
     )
   )
-}
-
-const addICalButton = (): void => {
-  const cancelButton: Element | null = document.querySelector(
-    'input[value="Cancel"]'
-  )
-
-  if (cancelButton !== null) {
-    cancelButton.insertAdjacentHTML(
-      'afterend',
-      '&nbsp;&nbsp;&nbsp;&nbsp;<input type="button" value="Pass iCal Data" onclick="">'
-    )
-    const icalButton: HTMLButtonElement = cancelButton.nextElementSibling as HTMLButtonElement
-    if (icalButton !== null) {
-      icalButton.onclick = processICalData
-    }
-  }
 }
 
 const findNearestEmptyRow = (rows): Element => {
@@ -155,6 +131,7 @@ const insertEntryValues = (entry, rows): void => {
     'input#P_DAY': 'day'
   }
 
+  // iterate inputs and set the values using the entry properties.
   Object.keys(idToEntryProperty).forEach((s) => {
     // get given input area
     const inputArea: HTMLInputElement = nearestEmptyRow.querySelector(s)
@@ -163,31 +140,17 @@ const insertEntryValues = (entry, rows): void => {
   })
 }
 
-const processICalData = (icalData): void => {
-  const rows = document.querySelectorAll('tbody#TSEntry tr')
-  for (const entry of parseICal(icalData)) {
-    insertEntryValues(entry, rows)
-  }
-}
-
 /**
  * Listen for paste and check if we can parse it as ical data.
  */
 addEventListener('paste', (event) => {
   const pastedData: string = event.clipboardData.getData('text/plain')
-  try {
-    // @ts-expect-error Since Userscript, we use @require icaljs lib but typescript doesn't know
-    ICAL.parse(pastedData)
-    const rows = document.querySelectorAll('tbody#TSEntry tr')
-    if (rows !== null) {
-      processICalData(pastedData)
-    }
-  } catch (e: any) {
-    // Ignore errors parsing as that just means pasted content wasn't ical data
+  const rows = document.querySelectorAll('tbody#TSEntry tr')
+  for (const entry of icalToEntryList(pastedData)) {
+    insertEntryValues(entry, rows)
   }
 })
 
-// addICalButton()
 // debugGetToTimesheetPage('11-Feb-2024')
 
 // *********************
