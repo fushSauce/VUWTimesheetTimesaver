@@ -141,48 +141,26 @@ const findNearestEmptyRow = (rows): Element => {
  * @param rows
  */
 const insertEntryValues = (entry, rows): void => {
-  // find nearest empty row
   const nearestEmptyRow = findNearestEmptyRow(rows)
 
-  const workDateInput: HTMLInputElement | null =
-    nearestEmptyRow.querySelector('input#P_WORK_DATE')
-  const startTimeInput: HTMLInputElement | null =
-    nearestEmptyRow.querySelector('input#P_START_TIME')
-  const finishTimeInput: HTMLInputElement | null =
-    nearestEmptyRow.querySelector('input#P_FINISH_TIME')
-  const breakInput: HTMLInputElement | null =
-    nearestEmptyRow.querySelector('input#P_BREAK')
-  const payCodeInput: HTMLInputElement | null =
-    nearestEmptyRow.querySelector('input#P_PAYCODE')
-  const activityInput: HTMLInputElement | null = nearestEmptyRow.querySelector(
-    'input#P_TOPIC_DETAILS'
-  )
-  const unitsInput: HTMLInputElement | null =
-    nearestEmptyRow.querySelector('input#P_UNITS')
-  const dayInput: HTMLInputElement | null =
-    nearestEmptyRow.querySelector('input#P_DAY')
-
-  if (
-    workDateInput === null ||
-    startTimeInput === null ||
-    finishTimeInput === null ||
-    breakInput === null ||
-    payCodeInput === null ||
-    activityInput === null ||
-    unitsInput === null ||
-    dayInput === null
-  ) {
-    throw new Error("Can't find all inputs for timesheet entry.")
+  // each input in the row has id and the entry property name that corresponds to it
+  const idToEntryProperty = {
+    'input#P_WORK_DATE': 'workDate',
+    'input#P_START_TIME': 'startTime',
+    'input#P_FINISH_TIME': 'finishTime',
+    'input#P_BREAK': 'breakLength',
+    'input#P_PAYCODE': 'payCode',
+    'input#P_TOPIC_DETAILS': 'activity',
+    'input#P_UNITS': 'units',
+    'input#P_DAY': 'day'
   }
 
-  workDateInput.value = entry.workDate
-  startTimeInput.value = entry.startTime
-  finishTimeInput.value = entry.finishTime
-  breakInput.value = entry.breakLength
-  payCodeInput.value = entry.payCode
-  activityInput.value = entry.activity
-  unitsInput.value = entry.units
-  dayInput.value = entry.day
+  Object.keys(idToEntryProperty).forEach((s) => {
+    // get given input area
+    const inputArea: HTMLInputElement = nearestEmptyRow.querySelector(s)
+    // set value in input area to the corresponding entry property value
+    inputArea.value = entry[idToEntryProperty[s]]
+  })
 }
 
 const processICalData = (icalData): void => {
