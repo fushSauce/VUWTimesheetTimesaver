@@ -119,13 +119,7 @@ const addICalButton = (): void => {
   }
 }
 
-/**
- * Finds nearest empty row and populates that row with the entry data.
- * @param entry
- * @param rows
- */
-const insertEntryValues = (entry, rows): void => {
-  // find nearest empty row
+const findNearestEmptyRow = (rows): Element => {
   let nearestEmptyRow: Element | null = null
 
   for (const row of rows) {
@@ -138,6 +132,17 @@ const insertEntryValues = (entry, rows): void => {
   if (nearestEmptyRow === null) {
     throw new Error("Couldn't find empty row!")
   }
+  return nearestEmptyRow
+}
+
+/**
+ * Finds nearest empty row and populates that row with the entry data.
+ * @param entry
+ * @param rows
+ */
+const insertEntryValues = (entry, rows): void => {
+  // find nearest empty row
+  const nearestEmptyRow = findNearestEmptyRow(rows)
 
   const workDateInput: HTMLInputElement | null =
     nearestEmptyRow.querySelector('input#P_WORK_DATE')
